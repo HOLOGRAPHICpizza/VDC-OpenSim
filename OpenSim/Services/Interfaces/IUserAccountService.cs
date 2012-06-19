@@ -179,8 +179,10 @@ namespace OpenSim.Services.Interfaces
 
             // CyberSecurity
             result["lastLoginTime"] = lastLoginTime.ToString();
-            result["lastIP"] = lastIP.ToString();
-            result["lastViewer"] = lastViewer;
+            if(lastIP != null)
+                result["lastIP"] = lastIP.ToString();
+            if(lastViewer != null)
+                result["lastViewer"] = lastViewer;
 
             return result;
         }
