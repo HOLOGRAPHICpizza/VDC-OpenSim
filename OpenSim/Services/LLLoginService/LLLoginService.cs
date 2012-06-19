@@ -228,6 +228,11 @@ namespace OpenSim.Services.LLLoginService
             return response;
         }
 
+        /*
+         * Get this to dump into a new table containing uuid, name, ip, clientVersion, and date.
+         * Indexed by UUID.
+         * Channel is viewer family, mac and id0 are hex strings.
+         */
         public LoginResponse Login(string firstName, string lastName, string passwd, string startLocation, UUID scopeID, 
             string clientVersion, string channel, string mac, string id0, IPEndPoint clientIP)
         {
@@ -415,7 +420,14 @@ namespace OpenSim.Services.LLLoginService
                 LLLoginResponse response = new LLLoginResponse(account, aCircuit, guinfo, destination, inventorySkel, friendsList, m_LibraryService,
                     where, startLocation, position, lookAt, gestures, m_WelcomeMessage, home, clientIP, m_MapTileURL, m_SearchURL, m_Currency);
 
-                m_log.DebugFormat("[LLOGIN SERVICE]: All clear. Sending login response to client.");
+                m_log.DebugFormat("[LLOGIN SERVICE]: All clear. Sending login response to client and logging.");
+
+                // CyberSecurity
+                account.lastIP = clientIP.Address.ToString();
+                account.lastLoginTime = Util.UnixTimeSinceEpoch();
+                account.lastViewer = clientVersion;
+                m_UserAccountService.StoreUserAccount(account);
+
                 return response;
             }
             catch (Exception e)

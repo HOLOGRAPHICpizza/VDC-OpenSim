@@ -97,6 +97,11 @@ namespace OpenSim.Services.Interfaces
 
         public int Created;
 
+        // CyberSecurity Data
+        public int lastLoginTime;
+        public string lastIP;
+        public string lastViewer;
+
         public string Name
         {
             get { return FirstName + " " + LastName; }
@@ -141,6 +146,14 @@ namespace OpenSim.Services.Interfaces
                     }
                 }
             }
+
+            // CyberSecurity
+            if(kvp.ContainsKey("lastLoginTime"))
+                lastLoginTime = Convert.ToInt32(kvp["lastLoginTime"].ToString());
+            if(kvp.ContainsKey("lastIP"))
+                ; //TODO: Parse
+            if (kvp.ContainsKey("lastViewer"))
+                lastViewer = kvp["lastViewer"].ToString();
         }
 
         public Dictionary<string, object> ToKeyValuePairs()
@@ -163,6 +176,11 @@ namespace OpenSim.Services.Interfaces
                 str += kvp.Key + "*" + (kvp.Value == null ? "" : kvp.Value) + ";";
             }
             result["ServiceURLs"] = str;
+
+            // CyberSecurity
+            result["lastLoginTime"] = lastLoginTime.ToString();
+            result["lastIP"] = lastIP.ToString();
+            result["lastViewer"] = lastViewer;
 
             return result;
         }

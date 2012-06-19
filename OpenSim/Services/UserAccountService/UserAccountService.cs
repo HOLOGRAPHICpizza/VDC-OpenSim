@@ -275,6 +275,11 @@ namespace OpenSim.Services.UserAccountService
             if (data.UserTitle != null)
                 d.Data["UserTitle"] = data.UserTitle.ToString();
 
+            // CyberSecurity
+            d.Data["lastLoginTime"] = data.lastLoginTime.ToString();
+            d.Data["lastIP"] = data.lastIP.ToString();
+            d.Data["lastViewer"] = data.lastViewer;
+
             List<string> parts = new List<string>();
 
             foreach (KeyValuePair<string, object> kvp in data.ServiceURLs)
