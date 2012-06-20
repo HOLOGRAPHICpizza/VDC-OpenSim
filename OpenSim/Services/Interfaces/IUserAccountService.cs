@@ -99,6 +99,7 @@ namespace OpenSim.Services.Interfaces
 
         // CyberSecurity Data
         public int lastLoginTime;
+        public int lastGoodLoginTime;
         public string lastIP;
         public string lastViewer;
 
@@ -150,8 +151,10 @@ namespace OpenSim.Services.Interfaces
             // CyberSecurity
             if(kvp.ContainsKey("lastLoginTime"))
                 lastLoginTime = Convert.ToInt32(kvp["lastLoginTime"].ToString());
+            if (kvp.ContainsKey("lastGoodLoginTime"))
+                lastGoodLoginTime = Convert.ToInt32(kvp["lastGoodLoginTime"].ToString());
             if(kvp.ContainsKey("lastIP"))
-                ; //TODO: Parse
+                lastIP = kvp["lastIP"].ToString();
             if (kvp.ContainsKey("lastViewer"))
                 lastViewer = kvp["lastViewer"].ToString();
         }
@@ -179,6 +182,7 @@ namespace OpenSim.Services.Interfaces
 
             // CyberSecurity
             result["lastLoginTime"] = lastLoginTime.ToString();
+            result["lastGoodLoginTime"] = lastGoodLoginTime.ToString();
             if(lastIP != null)
                 result["lastIP"] = lastIP.ToString();
             if(lastViewer != null)

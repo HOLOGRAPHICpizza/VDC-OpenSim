@@ -171,6 +171,16 @@ namespace OpenSim.Services.UserAccountService
             if (d.Data.ContainsKey("UserFlags") && d.Data["UserFlags"] != null)
                 Int32.TryParse(d.Data["UserFlags"], out u.UserFlags);
 
+            // CyberSecurity
+            if (d.Data.ContainsKey("lastLoginTime") && d.Data["lastLoginTime"] != null)
+                Int32.TryParse(d.Data["lastLoginTime"], out u.lastLoginTime);
+            if (d.Data.ContainsKey("lastGoodLoginTime") && d.Data["lastGoodLoginTime"] != null)
+                Int32.TryParse(d.Data["lastGoodLoginTime"], out u.lastGoodLoginTime);
+            if (d.Data.ContainsKey("lastIP") && d.Data["lastIP"] != null)
+                u.lastIP = d.Data["lastIP"].ToString();
+            if (d.Data.ContainsKey("lastViewer") && d.Data["lastViewer"] != null)
+                u.lastViewer = d.Data["lastViewer"].ToString();
+
             if (d.Data.ContainsKey("ServiceURLs") && d.Data["ServiceURLs"] != null)
             {
                 string[] URLs = d.Data["ServiceURLs"].ToString().Split(new char[] { ' ' });
@@ -277,7 +287,8 @@ namespace OpenSim.Services.UserAccountService
 
             // CyberSecurity
             d.Data["lastLoginTime"] = data.lastLoginTime.ToString();
-            d.Data["lastIP"] = data.lastIP.ToString();
+            d.Data["lastGoodLoginTime"] = data.lastGoodLoginTime.ToString();
+            d.Data["lastIP"] = data.lastIP;
             d.Data["lastViewer"] = data.lastViewer;
 
             List<string> parts = new List<string>();
