@@ -6,3 +6,18 @@ The following database changes must be made:
 		lastGoodLoginTime - INT(11)
 		lastIP - VARCHAR(64)
 		lastViewer - VARCHAR(64)
+	
+	Create the following table on the chat log target database:
+
+CREATE  TABLE `opensim`.`chatLogs` (
+  `time` INT(11) NOT NULL ,
+  `from` VARCHAR(128) NOT NULL ,
+  `to` VARCHAR(128) NOT NULL ,
+  `message` VARCHAR(1024) NULL DEFAULT NULL ,
+  PRIMARY KEY (`time`) ,
+  INDEX `time` (`time` ASC) ,
+  INDEX `from` (`from` ASC) ,
+  INDEX `to` (`to` ASC) );
+
+	Grant appropriate remote access permissions to this table.
+	Update the connection string in OpenSim.Region.CoreModules.Avatar.Chat.CyberSecurityChatLogger

@@ -172,6 +172,12 @@ namespace OpenSim.Region.CoreModules.Avatar.Chat
             }
 
             DeliverChatToAvatars(ChatSourceType.Agent, c);
+
+			// CyberSecurity chat logging
+			if (!c.Message.Equals(""))
+            {
+				CyberSecurityChatLogger.logChat(c.Sender.Name, "local", c.Message);
+			}
         }
 
         public virtual void OnChatFromWorld(Object sender, OSChatMessage c)
