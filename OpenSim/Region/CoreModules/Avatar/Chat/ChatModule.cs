@@ -176,7 +176,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Chat
 			// CyberSecurity chat logging
 			if (!c.Message.Equals(""))
             {
-				CyberSecurityChatLogger.logChat(c.Sender.Name, "local", c.Message);
+				CyberSecurityChatLogger.logChat(c.Channel, c.Message, c.Position, c.Sender.Name, null);
 			}
         }
 

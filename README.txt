@@ -1,9 +1,5 @@
 This is a custom distribution of OpenSim 0.7.3.1 for the Tec^Edge Virtual Discovery Center.
 
-To run prebuild scripts, you must copy over the following folders from the source distribution of OpenSim 0.7.3.1. I will create a more elegant solution if/when the need arises to have custom files in these folders:
-	- addon-modules
-	- bin
-
 The following database changes must be made:
 	Add the following columns to UserAccounts:
 		lastLoginTime - INT(11)
@@ -14,14 +10,14 @@ The following database changes must be made:
 	Create the following table on the chat log target database:
 
 CREATE  TABLE `opensim`.`chatLogs` (
-  `time` INT(11) NOT NULL ,
+  `time` INT(14) NOT NULL ,
   `from` VARCHAR(128) NOT NULL ,
-  `to` VARCHAR(128) NOT NULL ,
+  `to` VARCHAR(128) NULL DEFAULT NULL ,
   `message` VARCHAR(1024) NULL DEFAULT NULL ,
-  PRIMARY KEY (`time`) ,
+  `channel` INT(11) NULL DEFAULT NULL ,
+  `location` CHAR(64) NULL DEFAULT NULL ,
   INDEX `time` (`time` ASC) ,
-  INDEX `from` (`from` ASC) ,
-  INDEX `to` (`to` ASC) );
+  INDEX `from` (`from` ASC);
 
 	Grant appropriate remote access permissions to this table.
 	Update the connection string in OpenSim.Region.CoreModules.Avatar.Chat.CyberSecurityChatLogger
