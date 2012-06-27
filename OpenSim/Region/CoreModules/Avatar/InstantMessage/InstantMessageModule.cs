@@ -34,9 +34,18 @@ using OpenSim.Framework;
 using OpenSim.Framework.Client;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
+using OpenSim.Services.Interfaces;
 
 namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
 {
+	// Copied from LSL_Api.cs
+	public class UserInfoCacheEntry
+	{
+		public int time;
+		public UserAccount account;
+		public OpenSim.Services.Interfaces.PresenceInfo pinfo;
+	}
+
     public class InstantMessageModule : ISharedRegionModule
     {
         private static readonly ILog m_log = LogManager.GetLogger(
@@ -46,6 +55,9 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
         /// Is this module enabled?
         /// </value>
         private bool m_enabled = false;
+
+		private Dictionary<UUID, UserInfoCacheEntry> m_userInfoCache =
+				new Dictionary<UUID, UserInfoCacheEntry>();
         
         private readonly List<Scene> m_scenes = new List<Scene>();
 
@@ -159,8 +171,61 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
 
             if (m_TransferModule != null)
             {
-                if (client != null)
-                    im.fromAgentName = client.FirstName + " " + client.LastName;
+				// CyberSecurity chat logging
+				if (client != null)
+				{
+					im.fromAgentName = client.FirstName + " " + client.LastName;
+					String toAgentName;
+
+					// We will resolve the toAgent's name from UUID
+					UserAccount account = null;
+					UUID uuid = new UUID(im.toAgentID);
+
+					// BEGIN ACCOUNT LOOKUP
+					UserInfoCacheEntry ce;
+					// Try cache
+					if (!m_userInfoCache.TryGetValue(uuid, out ce))
+					{
+						// The cache lookup failed, perform lookup to cache
+						account = m_scenes[0].UserAccountService.GetUserAccount(m_scenes[0].RegionInfo.ScopeID, uuid);
+						if (account == null)
+						{
+							m_userInfoCache[uuid] = null; // Cache negative
+							// EXITS ACCOUNT LOOKUP
+						}
+						else
+						{
+							// Populate cache
+							ce = new UserInfoCacheEntry();
+							ce.time = Util.EnvironmentTickCount();
+							ce.account = account;
+						}
+						// PUT NOTHING HERE
+					}
+					else
+					{
+						// Cache lookup succeded?
+						if (ce != null)
+						{
+							// Yep
+							account = ce.account;
+						}
+					}
+					// END ACCOUNT LOOKUP
+
+					if (account != null)
+					{
+						toAgentName = account.Name;
+					}
+					else
+					{
+						toAgentName = im.toAgentID.ToString();
+					}
+
+					// Log the chat
+					Chat.CyberSecurityChatLogger.logChat(im.fromAgentName, toAgentName, im.message);
+				}
+
                 m_TransferModule.SendInstantMessage(im,
                     delegate(bool success)
                     {
@@ -202,3 +267,5 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
         }
     }
 }
+
+// Powered by Fozz (TM)
