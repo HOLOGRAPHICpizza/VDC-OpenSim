@@ -223,7 +223,7 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
 					}
 
 					// Log the chat
-					Chat.CyberSecurityChatLogger.logChat(null, im.message, im.Position, im.fromAgentName, toAgentName);
+					Chat.CyberSecurityChatLogger.logChat(null, im.message, im.Position, im.fromAgentName, toAgentName, m_scenes[0].RegionInfo.RegionName);
 				}
 
                 m_TransferModule.SendInstantMessage(im,

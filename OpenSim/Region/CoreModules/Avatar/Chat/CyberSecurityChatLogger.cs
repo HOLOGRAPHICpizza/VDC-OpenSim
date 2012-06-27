@@ -29,7 +29,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Chat
 		private static readonly ILog m_log =
 			LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-		public static void logChat(int? channel, string contents, Vector3 location, string sender, string receiver)
+		public static void logChat(int? channel, string contents, Vector3 location, string sender, string receiver, string region)
 		{
 			// This *ought* to give time since unix epoch in milliseconds which is what Java needs
 			TimeSpan t = (DateTime.UtcNow - new DateTime(1970, 1, 1).ToLocalTime());
@@ -45,7 +45,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Chat
 
 			// Log to TCP proxy
 			sendTCP(TCP_PROXY_SERVER, TCP_PROXY_PORT,
-				SerializeChat(channel, contents, location, sender, receiver, timestamp) + '\n');
+				SerializeChat(channel, contents, location, sender, receiver, timestamp, region) + '\n');
 
 			// Log to database
 			MySqlConnection dbcon = new MySqlConnection(DB_CONNECTION_STRING);
@@ -57,12 +57,12 @@ namespace OpenSim.Region.CoreModules.Avatar.Chat
 				// This is a local chat
 				if (receiver == null)
 				{
-					cmdStr = "INSERT INTO `opensim`.`chatLogs` (`time`, `from`, `to`, `message`, `channel`, `location`) VALUES (@time, @from, NULL, @message, @channel, @location);";
+					cmdStr = "INSERT INTO `opensim`.`chatLogs` (`time`, `from`, `to`, `message`, `channel`, `location`, `region`) VALUES (@time, @from, NULL, @message, @channel, @location, @region);";
 				}
 				// This is a private chat
 				else if (channel == null)
 				{
-					cmdStr = "INSERT INTO `opensim`.`chatLogs` (`time`, `from`, `to`, `message`, `channel`, `location`) VALUES (@time, @from, @to, @message, NULL, @location);";
+					cmdStr = "INSERT INTO `opensim`.`chatLogs` (`time`, `from`, `to`, `message`, `channel`, `location`, `region`) VALUES (@time, @from, @to, @message, NULL, @location, @region);";
 				}
 				else
 				{
@@ -80,6 +80,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Chat
 				if (channel != null)
 					cmd.Parameters.AddWithValue("@channel", channel);
 				cmd.Parameters.AddWithValue("@location", location.ToString());
+				cmd.Parameters.AddWithValue("@region", region);
 
 				cmd.ExecuteNonQuery();
 
@@ -139,7 +140,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Chat
 			}
         }
 
-		public static string SerializeChat(int? channel, string contents, Vector3 location, string sender, string receiver, long timestamp)
+		public static string SerializeChat(int? channel, string contents, Vector3 location, string sender, string receiver, long timestamp, string region)
 		{
 			StringWriter stringWriter = new StringWriter();
 			using (XmlWriter writer = XmlWriter.Create(stringWriter))
@@ -153,6 +154,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Chat
 				writer.WriteElementString("contents", contents);
 
 				writer.WriteStartElement("location");
+				writer.WriteElementString("region", region);
 				writer.WriteElementString("x", location.X.ToString());
 				writer.WriteElementString("y", location.Y.ToString());
 				writer.WriteElementString("z", location.Z.ToString());
