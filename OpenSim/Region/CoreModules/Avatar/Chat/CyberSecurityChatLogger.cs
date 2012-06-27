@@ -1,3 +1,8 @@
+/* Add the following project refrences:
+ *	- System.Data
+ *	- bin/MySql.Data.dll
+ */
+
 using System;
 using System.Data;
 using System.Reflection;

@@ -1,5 +1,9 @@
 This is a custom distribution of OpenSim 0.7.3.1 for the Tec^Edge Virtual Discovery Center.
 
+To run prebuild scripts, you must copy over the following folders from the source distribution of OpenSim 0.7.3.1. I will create a more elegant solution if/when the need arises to have custom files in these folders:
+	- addon-modules
+	- bin
+
 The following database changes must be made:
 	Add the following columns to UserAccounts:
 		lastLoginTime - INT(11)
