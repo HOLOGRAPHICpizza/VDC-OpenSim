@@ -228,11 +228,6 @@ namespace OpenSim.Services.LLLoginService
             return response;
         }
 
-        /*
-         * Get this to dump into a new table containing uuid, name, ip, clientVersion, and date.
-         * Indexed by UUID.
-         * Channel is viewer family, mac and id0 are hex strings.
-         */
         public LoginResponse Login(string firstName, string lastName, string passwd, string startLocation, UUID scopeID, 
             string clientVersion, string channel, string mac, string id0, IPEndPoint clientIP)
         {
@@ -279,7 +274,7 @@ namespace OpenSim.Services.LLLoginService
                     m_log.InfoFormat("[LLOGIN SERVICE]: Login failed, reason: user not found");
                     return LLFailedLoginResponse.UserProblem;
                 }
-                
+
                 if (account.UserLevel < m_MinLoginLevel)
                 {
                     m_log.InfoFormat("[LLOGIN SERVICE]: Login failed, reason: login is blocked for user level {0}", account.UserLevel);
@@ -302,11 +297,6 @@ namespace OpenSim.Services.LLLoginService
                     scopeID = account.ScopeID;
                 }
 
-                // CyberSecurity Logging
-                account.lastIP = clientIP.Address.ToString();
-                account.lastLoginTime = Util.UnixTimeSinceEpoch();
-                account.lastViewer = clientVersion;
-
                 //
                 // Authenticate this user
                 //
@@ -318,18 +308,8 @@ namespace OpenSim.Services.LLLoginService
                 if ((token == string.Empty) || (token != string.Empty && !UUID.TryParse(token, out secureSession)))
                 {
                     m_log.InfoFormat("[LLOGIN SERVICE]: Login failed, reason: authentication failed");
-
-                    // CyberSecurity log failed attempt
-                    m_log.InfoFormat("[LLOGIN SERVICE]: CyberSecurity: Logging failed attempt.");
-                    m_UserAccountService.StoreUserAccount(account);
-
                     return LLFailedLoginResponse.UserProblem;
                 }
-
-                // CyberSecurity log successfull attempt
-                m_log.InfoFormat("[LLOGIN SERVICE]: CyberSecurity: Logging successful attempt.");
-                account.lastGoodLoginTime = account.lastLoginTime;
-                m_UserAccountService.StoreUserAccount(account);
 
                 //
                 // Get the user's inventory
@@ -436,7 +416,6 @@ namespace OpenSim.Services.LLLoginService
                     where, startLocation, position, lookAt, gestures, m_WelcomeMessage, home, clientIP, m_MapTileURL, m_SearchURL, m_Currency);
 
                 m_log.DebugFormat("[LLOGIN SERVICE]: All clear. Sending login response to client.");
-
                 return response;
             }
             catch (Exception e)
