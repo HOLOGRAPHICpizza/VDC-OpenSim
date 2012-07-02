@@ -29,10 +29,10 @@ namespace OpenSim.Region.CoreModules.Avatar.Chat
 		private static readonly ILog m_log =
 			LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-		public static void logChat(int? channel, string contents, Vector3 location, string sender, string receiver, string region)
+		public static void logChat(int? channel, string contents, Vector3 location, string sender, string receiver, string region, UUID fromUuid, UUID? toUuid)
 		{
 			// This *ought* to give time since unix epoch in milliseconds which is what Java needs
-			TimeSpan t = (DateTime.UtcNow - new DateTime(1970, 1, 1).ToLocalTime());
+			TimeSpan t = (DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, 0).ToUniversalTime());
 			long timestamp = (long) t.TotalMilliseconds;
 
             // Log to console
@@ -45,7 +45,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Chat
 
 			// Log to TCP proxy
 			sendTCP(TCP_PROXY_SERVER, TCP_PROXY_PORT,
-				SerializeChat(channel, contents, location, sender, receiver, timestamp, region) + '\n');
+				SerializeChat(channel, contents, location, sender, receiver, timestamp, region, fromUuid, toUuid) + '\n');
 
 			// Log to database
 			MySqlConnection dbcon = new MySqlConnection(DB_CONNECTION_STRING);
@@ -57,12 +57,12 @@ namespace OpenSim.Region.CoreModules.Avatar.Chat
 				// This is a local chat
 				if (receiver == null)
 				{
-					cmdStr = "INSERT INTO `opensim`.`chatLogs` (`time`, `from`, `to`, `message`, `channel`, `location`, `region`) VALUES (@time, @from, NULL, @message, @channel, @location, @region);";
+					cmdStr = "INSERT INTO `opensim`.`chatLogs` (`time`, `from`, `to`, `message`, `channel`, `location`, `region`, `fromUuid`, `toUuid`) VALUES (@time, @from, NULL, @message, @channel, @location, @region, @fromUuid, NULL);";
 				}
 				// This is a private chat
 				else if (channel == null)
 				{
-					cmdStr = "INSERT INTO `opensim`.`chatLogs` (`time`, `from`, `to`, `message`, `channel`, `location`, `region`) VALUES (@time, @from, @to, @message, NULL, @location, @region);";
+					cmdStr = "INSERT INTO `opensim`.`chatLogs` (`time`, `from`, `to`, `message`, `channel`, `location`, `region`, `fromUuid`, `toUuid`) VALUES (@time, @from, @to, @message, NULL, @location, @region, @fromUuid, @toUuid);";
 				}
 				else
 				{
@@ -72,7 +72,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Chat
 
 
 				MySqlCommand cmd = new MySqlCommand(cmdStr, dbcon);
-				cmd.Parameters.AddWithValue("@time", timestamp);
+				cmd.Parameters.AddWithValue("@time", timestamp.ToString());
 				cmd.Parameters.AddWithValue("@from", sender);
 				if (receiver != null)
 					cmd.Parameters.AddWithValue("@to", receiver);
@@ -81,6 +81,9 @@ namespace OpenSim.Region.CoreModules.Avatar.Chat
 					cmd.Parameters.AddWithValue("@channel", channel);
 				cmd.Parameters.AddWithValue("@location", location.ToString());
 				cmd.Parameters.AddWithValue("@region", region);
+				cmd.Parameters.AddWithValue("@fromUuid", fromUuid.ToString());
+				if (toUuid != null)
+					cmd.Parameters.AddWithValue("@toUuid", toUuid.ToString());
 
 				cmd.ExecuteNonQuery();
 
@@ -121,7 +124,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Chat
         {
 			try
 			{
-				Byte[] data = System.Text.Encoding.ASCII.GetBytes(message);
+				Byte[] data = System.Text.Encoding.Unicode.GetBytes(message);
 
 				TcpClient client = new TcpClient(server, port);
 				NetworkStream stream = client.GetStream();
@@ -140,7 +143,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Chat
 			}
         }
 
-		public static string SerializeChat(int? channel, string contents, Vector3 location, string sender, string receiver, long timestamp, string region)
+		public static string SerializeChat(int? channel, string contents, Vector3 location, string sender, string receiver, long timestamp, string region, UUID fromUuid, UUID? toUuid)
 		{
 			StringWriter stringWriter = new StringWriter();
 			using (XmlWriter writer = XmlWriter.Create(stringWriter))
@@ -160,9 +163,18 @@ namespace OpenSim.Region.CoreModules.Avatar.Chat
 				writer.WriteElementString("z", location.Z.ToString());
 				writer.WriteEndElement();
 
-				writer.WriteElementString("sender", sender);
-				if(receiver != null)
-					writer.WriteElementString("receiver", receiver);
+				writer.WriteStartElement("sender");
+				writer.WriteElementString("name", sender);
+				writer.WriteElementString("uuid", fromUuid.ToString());
+				writer.WriteEndElement();
+
+				if (receiver != null)
+				{
+					writer.WriteStartElement("receiver");
+					writer.WriteElementString("name", receiver);
+					writer.WriteElementString("uuid", toUuid.ToString());
+					writer.WriteEndElement();
+				}
 
 				writer.WriteElementString("time", timestamp.ToString());
 

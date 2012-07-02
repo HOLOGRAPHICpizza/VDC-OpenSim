@@ -56,8 +56,9 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
         /// </value>
         private bool m_enabled = false;
 
-		private Dictionary<UUID, UserInfoCacheEntry> m_userInfoCache =
+		private static Dictionary<UUID, UserInfoCacheEntry> m_userInfoCache =
 				new Dictionary<UUID, UserInfoCacheEntry>();
+		private static Scene staticScene = null;
         
         private readonly List<Scene> m_scenes = new List<Scene>();
 
@@ -91,6 +92,11 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
                     scene.EventManager.OnClientConnect += OnClientConnect;
                     scene.EventManager.OnIncomingInstantMessage += OnGridInstantMessage;
                 }
+
+				if (staticScene == null)
+				{
+					staticScene = scene;
+				}
             }
         }
 
@@ -156,6 +162,51 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
 
         #endregion
 
+		public static UserAccount getAccountByUUID(Guid uuid)
+		{
+			return getAccountByUUID(new UUID(uuid));
+		}
+
+		public static UserAccount getAccountByUUID(UUID uuid)
+		{
+			// We will resolve the toAgent's name from UUID
+			UserAccount account = null;;
+
+			// BEGIN ACCOUNT LOOKUP
+			UserInfoCacheEntry ce;
+			// Try cache
+			if (!m_userInfoCache.TryGetValue(uuid, out ce))
+			{
+				// The cache lookup failed, perform lookup to cache
+				account = staticScene.UserAccountService.GetUserAccount(staticScene.RegionInfo.ScopeID, uuid);
+				if (account == null)
+				{
+					m_userInfoCache[uuid] = null; // Cache negative
+					// EXITS ACCOUNT LOOKUP
+				}
+				else
+				{
+					// Populate cache
+					ce = new UserInfoCacheEntry();
+					ce.time = Util.EnvironmentTickCount();
+					ce.account = account;
+				}
+				// PUT NOTHING HERE
+			}
+			else
+			{
+				// Cache lookup succeded?
+				if (ce != null)
+				{
+					// Yep
+					account = ce.account;
+				}
+			}
+			// END ACCOUNT LOOKUP
+
+			return account;
+		}
+
         public void OnInstantMessage(IClientAPI client, GridInstantMessage im)
         {
             byte dialog = im.dialog;
@@ -175,55 +226,27 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
 				if (client != null)
 				{
 					im.fromAgentName = client.FirstName + " " + client.LastName;
-					String toAgentName;
 
-					// We will resolve the toAgent's name from UUID
-					UserAccount account = null;
-					UUID uuid = new UUID(im.toAgentID);
-
-					// BEGIN ACCOUNT LOOKUP
-					UserInfoCacheEntry ce;
-					// Try cache
-					if (!m_userInfoCache.TryGetValue(uuid, out ce))
+					if(!im.message.Equals("typing"))
 					{
-						// The cache lookup failed, perform lookup to cache
-						account = m_scenes[0].UserAccountService.GetUserAccount(m_scenes[0].RegionInfo.ScopeID, uuid);
-						if (account == null)
+						// Look up user accounts
+						UserAccount toAccount = getAccountByUUID(im.toAgentID);
+						UserAccount fromAccount = getAccountByUUID(im.fromAgentID);
+
+						string toAgentName = null;
+						if (toAccount != null)
 						{
-							m_userInfoCache[uuid] = null; // Cache negative
-							// EXITS ACCOUNT LOOKUP
+							toAgentName = toAccount.Name;
 						}
 						else
 						{
-							// Populate cache
-							ce = new UserInfoCacheEntry();
-							ce.time = Util.EnvironmentTickCount();
-							ce.account = account;
+							toAgentName = im.toAgentID.ToString();
 						}
-						// PUT NOTHING HERE
-					}
-					else
-					{
-						// Cache lookup succeded?
-						if (ce != null)
-						{
-							// Yep
-							account = ce.account;
-						}
-					}
-					// END ACCOUNT LOOKUP
 
-					if (account != null)
-					{
-						toAgentName = account.Name;
+						// Log the chat
+						//TODO: Get the actual position of the from account
+						Chat.CyberSecurityChatLogger.logChat(null, im.message, Vector3.Zero, im.fromAgentName, toAgentName, m_scenes[0].RegionInfo.RegionName, new UUID(im.fromAgentID), new UUID(im.toAgentID));
 					}
-					else
-					{
-						toAgentName = im.toAgentID.ToString();
-					}
-
-					// Log the chat
-					Chat.CyberSecurityChatLogger.logChat(null, im.message, im.Position, im.fromAgentName, toAgentName, m_scenes[0].RegionInfo.RegionName);
 				}
 
                 m_TransferModule.SendInstantMessage(im,
