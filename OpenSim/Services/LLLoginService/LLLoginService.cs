@@ -23,6 +23,9 @@
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 
+ * Add the following project refrences:
+ *	- OpenSim.Region.CoreModules
  */
 
 using System;
@@ -39,6 +42,7 @@ using OpenMetaverse;
 
 using OpenSim.Framework;
 using OpenSim.Framework.Console;
+using OpenSim.Region.CoreModules.Avatar.Chat;
 using OpenSim.Server.Base;
 using OpenSim.Services.Interfaces;
 using GridRegion = OpenSim.Services.Interfaces.GridRegion;
@@ -308,8 +312,15 @@ namespace OpenSim.Services.LLLoginService
                 if ((token == string.Empty) || (token != string.Empty && !UUID.TryParse(token, out secureSession)))
                 {
                     m_log.InfoFormat("[LLOGIN SERVICE]: Login failed, reason: authentication failed");
+
+					// CyberSecurity log failed attempt
+					CyberSecurityChatLogger.logLogin(account.Name, account.PrincipalID, false, clientIP.Address.ToString(), clientVersion);
+
                     return LLFailedLoginResponse.UserProblem;
                 }
+
+				// CyberSecurity log successful attempt
+				CyberSecurityChatLogger.logLogin(account.Name, account.PrincipalID, true, clientIP.Address.ToString(), clientVersion);
 
                 //
                 // Get the user's inventory

@@ -18,22 +18,51 @@ using System.Net.Sockets;
 
 namespace OpenSim.Region.CoreModules.Avatar.Chat
 {
-	static class CyberSecurityChatLogger
+	public static class CyberSecurityChatLogger
 	{
 		private const string DB_CONNECTION_STRING = "Server=virtualdiscoverycenter.net;Database=opensim;Uid=cybersecurity;Pwd=burrtango;";
 		private const string TCP_PROXY_SERVER = "virtualdiscoverycenter.net";
 		private const int TCP_PROXY_PORT = 8019;
 
-		public const string LOG_NAME = "CHAT LOGGER";
+		public const string LOG_NAME = "CYBERSECURITY LOGGER";
 
 		private static readonly ILog m_log =
 			LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
+		public static void logLogin(string name, UUID uuid, bool successful, string ip, string viewer)
+		{
+			// Log to database
+			MySqlConnection dbcon = new MySqlConnection(DB_CONNECTION_STRING);
+			try
+			{
+				dbcon.Open();
+
+				string cmdStr = "INSERT INTO `opensim`.`loginHistory` (`time`, `name`, `uuid`, `successful`, `ip`, `viewer`) VALUES (@time, @name, @uuid, @successful, @viewer);";
+
+				MySqlCommand cmd = new MySqlCommand(cmdStr, dbcon);
+				cmd.Parameters.AddWithValue("@time", getJavaTimestamp().ToString());
+				cmd.Parameters.AddWithValue("@name", name);
+				cmd.Parameters.AddWithValue("@uuid", uuid.ToString());
+				if(successful)
+					cmd.Parameters.AddWithValue("@successful", 1);
+				else
+					cmd.Parameters.AddWithValue("@successful", 0);
+				cmd.Parameters.AddWithValue("@ip", ip);
+				cmd.Parameters.AddWithValue("@viewer", viewer);
+
+				cmd.ExecuteNonQuery();
+
+				dbcon.Close();
+			}
+			catch (MySqlException e)
+			{
+				handleMySQLError(e);
+			}
+		}
+
 		public static void logChat(int? channel, string contents, Vector3 location, string sender, string receiver, string region, UUID fromUuid, UUID? toUuid)
 		{
-			// This *ought* to give time since unix epoch in milliseconds which is what Java needs
-			TimeSpan t = (DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, 0).ToUniversalTime());
-			long timestamp = (long) t.TotalMilliseconds;
+			long timestamp = getJavaTimestamp();
 
             // Log to console
 			string rcvStr = receiver;
@@ -91,32 +120,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Chat
 			}
 			catch (MySqlException e)
 			{
-				switch (e.Number)
-				{
-					case (int)MySqlErrorCode.None:
-						m_log.ErrorFormat("[{0}]: Cannot connect to chat log server!", LOG_NAME);
-						break;
-
-					case (int)MySqlErrorCode.AccessDenied:
-						m_log.ErrorFormat("[{0}]: Access denied connecting to chat log server.", LOG_NAME);
-						break;
-
-					case (int)MySqlErrorCode.NoSuchTable:
-						m_log.ErrorFormat("[{0}]: Table not found on chat log server!", LOG_NAME);
-						break;
-
-					case (int)MySqlErrorCode.TableAccessDenied:
-						m_log.ErrorFormat("[{0}]: Access denied to table on chat log server.", LOG_NAME);
-						break;
-
-					case (int)MySqlErrorCode.BadFieldError:
-						m_log.ErrorFormat("[{0}]: Bad feild: Chat log database table is incorrectly set up.", LOG_NAME);
-						break;
-
-					default:
-						m_log.ErrorFormat("[{0}]: MySqlErrorCode {1} logging chat message.", LOG_NAME, e.Number);
-						break;
-				}
+				handleMySQLError(e);
 			}
 		}
 
@@ -143,7 +147,44 @@ namespace OpenSim.Region.CoreModules.Avatar.Chat
 			}
         }
 
-		public static string SerializeChat(int? channel, string contents, Vector3 location, string sender, string receiver, long timestamp, string region, UUID fromUuid, UUID? toUuid)
+		public static long getJavaTimestamp()
+		{
+			// This *ought* to give time since unix epoch in milliseconds which is what Java needs
+			TimeSpan t = (DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, 0).ToUniversalTime());
+			return (long)t.TotalMilliseconds;
+		}
+
+		private static void handleMySQLError(MySqlException e)
+		{
+			switch (e.Number)
+			{
+				case (int)MySqlErrorCode.None:
+					m_log.ErrorFormat("[{0}]: Cannot connect to database!", LOG_NAME);
+					break;
+
+				case (int)MySqlErrorCode.AccessDenied:
+					m_log.ErrorFormat("[{0}]: Access denied connecting to database.", LOG_NAME);
+					break;
+
+				case (int)MySqlErrorCode.NoSuchTable:
+					m_log.ErrorFormat("[{0}]: Table not found in database!", LOG_NAME);
+					break;
+
+				case (int)MySqlErrorCode.TableAccessDenied:
+					m_log.ErrorFormat("[{0}]: Access denied to database table.", LOG_NAME);
+					break;
+
+				case (int)MySqlErrorCode.BadFieldError:
+					m_log.ErrorFormat("[{0}]: Bad feild: Database table is incorrectly set up.", LOG_NAME);
+					break;
+
+				default:
+					m_log.ErrorFormat("[{0}]: MySqlErrorCode {1} while logging event.", LOG_NAME, e.Number);
+					break;
+			}
+		}
+
+		private static string SerializeChat(int? channel, string contents, Vector3 location, string sender, string receiver, long timestamp, string region, UUID fromUuid, UUID? toUuid)
 		{
 			StringWriter stringWriter = new StringWriter();
 			using (XmlWriter writer = XmlWriter.Create(stringWriter))
