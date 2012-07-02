@@ -128,7 +128,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Chat
         {
 			try
 			{
-				Byte[] data = System.Text.Encoding.Unicode.GetBytes(message);
+				Byte[] data = System.Text.Encoding.UTF8.GetBytes(message);
 
 				TcpClient client = new TcpClient(server, port);
 				NetworkStream stream = client.GetStream();
@@ -186,8 +186,10 @@ namespace OpenSim.Region.CoreModules.Avatar.Chat
 
 		private static string SerializeChat(int? channel, string contents, Vector3 location, string sender, string receiver, long timestamp, string region, UUID fromUuid, UUID? toUuid)
 		{
-			StringWriter stringWriter = new StringWriter();
-			using (XmlWriter writer = XmlWriter.Create(stringWriter))
+			StringWriter stringWriter = new Utf8StringWriter();
+			XmlWriterSettings settings = new XmlWriterSettings();
+			settings.Encoding = System.Text.Encoding.UTF8;
+			using (XmlWriter writer = XmlWriter.Create(stringWriter, settings))
 			{
 				writer.WriteStartDocument();
 				writer.WriteStartElement("message");
@@ -224,6 +226,17 @@ namespace OpenSim.Region.CoreModules.Avatar.Chat
 			}
 
 			return stringWriter.ToString();
+		}
+
+		private class Utf8StringWriter : StringWriter
+		{
+			public override System.Text.Encoding Encoding
+			{
+				get
+				{
+					return System.Text.Encoding.UTF8;
+				}
+			}
 		}
 	}
 }
